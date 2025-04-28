@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const prisma = require("./db");
 const authRoutes = require("./routes/auth");
+const itemRoutes = require("./routes/items");
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/items", itemRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

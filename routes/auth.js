@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { protect } = require("../middleware/authMiddleware"); // Import the protect middleware
 
 const router = express.Router();
 const saltRounds = 10;
@@ -17,7 +18,7 @@ router.post("/register", async (req, res, next) => {
       where: { username: username },
     });
     if (existingUser) {
-      return res.status(409).json({ message: "Username already exists." });
+      return res.status(409).json({ message: "Username already taken" });
     }
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     const newUser = await prisma.user.create({
@@ -43,7 +44,9 @@ router.post("/register", async (req, res, next) => {
         .json({ message: "Authentication configuration error." });
     }
     const token = jwt.sign(tokenPayload, secretKey, tokenOptions);
-    res.status(201).json({ message: "User registered successfully." });
+    res
+      .status(201)
+      .json({ token: token, message: "User registered successfully" });
   } catch (error) {
     next(error);
   }
@@ -60,7 +63,7 @@ router.post("/login", async (req, res, next) => {
       where: { username: username },
     });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: "Invalid credentials." });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
     // Generate JWT token
     const tokenPayload = { userId: user.id, username: user.username };
@@ -72,9 +75,18 @@ router.post("/login", async (req, res, next) => {
         .json({ message: "Authentication configuration error." });
     }
     const token = jwt.sign(tokenPayload, secretKey, tokenOptions);
-    res.status(200).json({ message: "Login successful." });
+    res.status(200).json({ token: token, message: "Login successful" });
   } catch (error) {
     next(error);
+  }
+});
+
+// Protected route example GET /api/auth/protected
+router.get("/me", protect, async (req, res, next) => {
+  if (req.user) {
+    res.status(200).json(req.user);
+  } else {
+    res.status(401).json({ message: "Not authorized" });
   }
 });
 
