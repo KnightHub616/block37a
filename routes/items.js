@@ -2,7 +2,6 @@ const express = require("express");
 const prisma = require("../db");
 const { protect } = require("../middleware/authMiddleware");
 
-console.log("--- Loading routes/items.js file ---");
 
 const router = express.Router();
 
@@ -72,7 +71,6 @@ router.get("/:itemId/reviews", async (req, res, next) => {
 });
 
 router.post("/:itemId/reviews", protect, async (req, res, next) => {
-  console.log(">>> Reached handler for POST /:itemId/reviews");
   const { itemId } = req.params;
   const { text, rating } = req.body;
   const userId = req.user.id;

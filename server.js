@@ -1,9 +1,10 @@
-const express = require("express");
-const dotenv = require("dotenv");
-const prisma = require("./db");
-const authRoutes = require("./routes/auth");
-const itemRoutes = require("./routes/items");
-const reviewRoutes = require("./routes/reviews");
+const express = require('express');
+const dotenv = require('dotenv');
+const prisma = require('./db');
+const authRoutes = require('./routes/auth');
+const itemRoutes = require('./routes/items');
+const reviewRoutes = require('./routes/reviews');
+const commentRoutes = require('./routes/comments');
 
 dotenv.config();
 
@@ -17,33 +18,35 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/api/health", (req, res) => {
-  res.send({ status: "UP", timestamp: new Date() });
+app.get('/api/health', (req, res) => {
+  res.send({ status: 'UP', timestamp: new Date() });
 });
 
-app.use("/api/auth", authRoutes);
-app.use("/api/items", itemRoutes);
-app.use("/api/reviews", reviewRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/items', itemRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/comments', commentRoutes);
+
 
 app.use((err, req, res, next) => {
   console.error("Error caught by middleware:", err);
   res.status(err.status || 500).send({
-    message: err.message || "Something went wrong!",
-  });
+      message: err.message || 'Something went wrong!',
+   });
 });
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
 
-process.on("SIGINT", async () => {
+process.on('SIGINT', async () => {
   await prisma.$disconnect();
-  console.log("Prisma Client disconnected. Shutting down server.");
+  console.log('Prisma Client disconnected. Shutting down server.');
   process.exit(0);
 });
-process.on("SIGTERM", async () => {
+process.on('SIGTERM', async () => {
   await prisma.$disconnect();
-  console.log("Prisma Client disconnected. Shutting down server.");
+  console.log('Prisma Client disconnected. Shutting down server.');
   process.exit(0);
 });
 

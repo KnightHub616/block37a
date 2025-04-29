@@ -1,10 +1,10 @@
-const express = require('express');
-const prisma = require('../db');
-const { protect } = require('../middleware/authMiddleware');
+const express = require("express");
+const prisma = require("../db");
+const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-router.get('/me', protect, async (req, res, next) => {
+router.get("/me", protect, async (req, res, next) => {
   const userId = req.user.id;
   try {
     const userReviews = await prisma.review.findMany({
@@ -12,7 +12,7 @@ router.get('/me', protect, async (req, res, next) => {
         userId: userId,
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       include: {
         item: {
@@ -29,7 +29,7 @@ router.get('/me', protect, async (req, res, next) => {
   }
 });
 
-router.get('/:reviewId', async (req, res, next) => {
+router.get("/:reviewId", async (req, res, next) => {
   const { reviewId } = req.params;
   try {
     const review = await prisma.review.findUnique({
@@ -40,31 +40,35 @@ router.get('/:reviewId', async (req, res, next) => {
       },
     });
     if (!review) {
-      return res.status(404).json({ message: 'Review not found' });
+      return res.status(404).json({ message: "Review not found" });
     }
     res.status(200).json(review);
   } catch (error) {
-     if (error.code === 'P2023' || error.message.includes('Malformed UUID')) {
-         return res.status(400).json({ message: 'Invalid review ID format' });
+    if (error.code === "P2023" || error.message.includes("Malformed UUID")) {
+      return res.status(400).json({ message: "Invalid review ID format" });
     }
     next(error);
   }
 });
 
-router.put('/:reviewId', protect, async (req, res, next) => {
+router.put("/:reviewId", protect, async (req, res, next) => {
   const { reviewId } = req.params;
   const { text, rating } = req.body;
   const userId = req.user.id;
 
   if (text === undefined && rating === undefined) {
-    return res.status(400).json({ message: 'Review text or rating must be provided for update' });
+    return res
+      .status(400)
+      .json({ message: "Review text or rating must be provided for update" });
   }
   let ratingNum;
   if (rating !== undefined) {
-      ratingNum = parseInt(rating, 10);
-      if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-        return res.status(400).json({ message: 'Rating must be a number between 1 and 5' });
-      }
+    ratingNum = parseInt(rating, 10);
+    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      return res
+        .status(400)
+        .json({ message: "Rating must be a number between 1 and 5" });
+    }
   }
 
   try {
@@ -73,19 +77,23 @@ router.put('/:reviewId', protect, async (req, res, next) => {
     });
 
     if (!review) {
-      return res.status(404).json({ message: 'Review not found' });
+      return res.status(404).json({ message: "Review not found" });
     }
 
     if (review.userId !== userId) {
-      return res.status(403).json({ message: 'Forbidden: You are not authorized to update this review' });
+      return res
+        .status(403)
+        .json({
+          message: "Forbidden: You are not authorized to update this review",
+        });
     }
 
     const updateData = {};
     if (text !== undefined) {
-        updateData.text = text;
+      updateData.text = text;
     }
     if (ratingNum !== undefined) {
-        updateData.rating = ratingNum;
+      updateData.rating = ratingNum;
     }
 
     const updatedReview = await prisma.review.update({
@@ -93,19 +101,19 @@ router.put('/:reviewId', protect, async (req, res, next) => {
       data: updateData,
       include: {
         user: { select: { id: true, username: true } },
-        item: { select: { id: true, name: true } }
-      }
+        item: { select: { id: true, name: true } },
+      },
     });
     res.status(200).json(updatedReview);
   } catch (error) {
-     if (error.code === 'P2023' || error.message.includes('Malformed UUID')) {
-         return res.status(400).json({ message: 'Invalid review ID format' });
+    if (error.code === "P2023" || error.message.includes("Malformed UUID")) {
+      return res.status(400).json({ message: "Invalid review ID format" });
     }
     next(error);
   }
 });
 
-router.delete('/:reviewId', protect, async (req, res, next) => {
+router.delete("/:reviewId", protect, async (req, res, next) => {
   const { reviewId } = req.params;
   const userId = req.user.id;
 
@@ -115,25 +123,69 @@ router.delete('/:reviewId', protect, async (req, res, next) => {
     });
 
     if (!review) {
-      return res.status(404).json({ message: 'Review not found' });
+      return res.status(404).json({ message: "Review not found" });
     }
 
     if (review.userId !== userId) {
-      return res.status(403).json({ message: 'Forbidden: You are not authorized to delete this review' });
+      return res
+        .status(403)
+        .json({
+          message: "Forbidden: You are not authorized to delete this review",
+        });
     }
 
     await prisma.review.delete({
       where: { id: reviewId },
     });
 
-    res.status(200).json({ message: 'Review deleted successfully' });
-
+    res.status(200).json({ message: "Review deleted successfully" });
   } catch (error) {
-     if (error.code === 'P2023' || error.message.includes('Malformed UUID')) {
-         return res.status(400).json({ message: 'Invalid review ID format' });
+    if (error.code === "P2023" || error.message.includes("Malformed UUID")) {
+      return res.status(400).json({ message: "Invalid review ID format" });
     }
-    if (error.code === 'P2014') {
-         return res.status(409).json({ message: 'Cannot delete review, related data exists (e.g., comments)' });
+    if (error.code === "P2014") {
+      return res
+        .status(409)
+        .json({
+          message: "Cannot delete review, related data exists (e.g., comments)",
+        });
+    }
+    next(error);
+  }
+});
+
+router.post("/:reviewId/comments", protect, async (req, res, next) => {
+  const { reviewId } = req.params;
+  const { text } = req.body;
+  const userId = req.user.id;
+
+  if (!text || text.trim() === "") {
+    return res.status(400).json({ message: "Comment text cannot be empty" });
+  }
+
+  try {
+    const reviewExists = await prisma.review.findUnique({
+      where: { id: reviewId },
+      select: { id: true },
+    });
+    if (!reviewExists) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    const newComment = await prisma.comment.create({
+      data: {
+        text: text,
+        userId: userId,
+        reviewId: reviewId,
+      },
+      include: {
+        user: { select: { id: true, username: true } },
+      },
+    });
+    res.status(201).json(newComment);
+  } catch (error) {
+    if (error.code === "P2023" || error.message.includes("Malformed UUID")) {
+      return res.status(400).json({ message: "Invalid review ID format" });
     }
     next(error);
   }
