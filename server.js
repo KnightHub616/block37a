@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const prisma = require("./db");
 const authRoutes = require("./routes/auth");
 const itemRoutes = require("./routes/items");
+const reviewRoutes = require("./routes/reviews");
 
 dotenv.config();
 
@@ -11,16 +12,24 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log(`>>> Incoming Request: ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 app.get("/api/health", (req, res) => {
   res.send({ status: "UP", timestamp: new Date() });
 });
 
 app.use("/api/auth", authRoutes);
 app.use("/api/items", itemRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send({ message: "Something broke!", error: err.message });
+  console.error("Error caught by middleware:", err);
+  res.status(err.status || 500).send({
+    message: err.message || "Something went wrong!",
+  });
 });
 
 app.listen(PORT, () => {
